@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from seaborn.matrix import dendrogram
+from seaborn.utils import despine
 import seaborn as sns
 import numpy as np
 
@@ -23,12 +24,10 @@ class Plotter(object):
         self.fig, self.axes = plt.subplots(len(self.row_split_dic)+1,
                                            len(self.col_split_dic)+1,
                                            figsize=self.figsize)
-
         self._row_dendrograms = {}
         self._col_dendrograms = {}
         self.col_cluster_orders = col_cluster_orders
         self.row_cluster_orders = row_cluster_orders
-
 
     @staticmethod
     def _determine_figsize(figsize, data):
@@ -46,6 +45,7 @@ class Plotter(object):
                                               ax=self.axes[i+1, 0] if axis == 0 else self.axes[0, i+1],
                                               axis=axis,
                                               rotate=90 if axis == 0 else 0)
+            despine(ax=self.axes[i+1, 0], bottom=True, left=True)
 
     def _fill_heatmaps(self,
                        data,
@@ -67,7 +67,6 @@ class Plotter(object):
             for j, col in enumerate(col_cluster_orders):
                 sel_col_samples: List[str] = np.array(col_split_dic[col])[col_dendrograms[col].reordered_ind]
                 subset_data = data.loc[sel_row_samples, sel_col_samples]
-
                 sns.heatmap(subset_data, ax=self.axes[i+1, j+1], cbar=False, **kwargs)
 
     def plot(self):
@@ -75,7 +74,6 @@ class Plotter(object):
                             self.row_split_dic,
                             self._row_dendrograms,
                             self.row_cluster_orders, 0)
-
         self._split_cluster(self.data,
                             self.col_split_dic,
                             self._col_dendrograms,
