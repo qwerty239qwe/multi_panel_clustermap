@@ -1,5 +1,7 @@
 import pandas as pd
 from pathlib import Path
+from src._preprocessing import *
+from typing import List
 
 
 class DataLoader(object):
@@ -47,8 +49,60 @@ class DataLoader(object):
 
 
 class DataProcessor(object):
-    def __init__(self, parent_data_dir):
+    def __init__(self,
+                 parent_data_dir,
+                 sample_metadata: pd.DataFrame,
+                 group_cols: List[str],
+                 cluster_orders=None,
+                 group_orders=None):
         self._parent_data_dir = parent_data_dir
+
+        self._sample_metadata = sample_metadata
+        self._group_cols = group_cols # and this is the groups of samples
+        self._group_info = self._parse_metadata(sample_metadata, group_cols)
+        self._group_orders = group_orders if cluster_orders is not None else list(
+            self._group_info[group_cols[0]].keys())
+        self._group_preprocessings = {}
 
         self._data_loaders = {f.stem: DataLoader(f)
                               for f in Path(self._parent_data_dir).iterdir() if f.is_dir()}
+
+        self._cluster_orders = cluster_orders if cluster_orders is not None else list(self._data_loaders.keys())
+        #  for the ease of clarifying, we use cluster to denote the groups of cell types (sep by panels)
+        self._cluster_preprocessings = {}
+
+    @staticmethod
+    def _parse_metadata(sample_metadata, group_cols):
+        group_dic = {}
+        for g in group_cols:
+            group_dic[g] = sample_metadata.groupby(g).apply(lambda x: list(x.index)).to_dict()
+        return group_dic
+
+    def add_preprocessing(self,
+                          preprocessing_name,
+                          axis=0,
+                          **kwargs):
+        if axis == 0:
+            self._cluster_preprocessings[preprocessing_name] = PREPROCESSINGS[preprocessing_name](**kwargs)
+        elif axis == 1:
+            self._group_preprocessings[preprocessing_name] = PREPROCESSINGS[preprocessing_name](**kwargs)
+
+    def get_processed_data(self,
+                           property_name_or_id: str,
+                           cluster_preprocessings="all",
+                           group_preprocessings="all"):
+        mg_data = pd.concat([self._data_loaders[c_order].get_merged(property_name_or_id)
+                             for c_order in self._cluster_orders], axis=0)
+
+        if cluster_preprocessings == "all":
+            cluster_preprocessings = list(self._cluster_preprocessings.keys())
+        if group_preprocessings == "all":
+            group_preprocessings = list(self._group_preprocessings.keys())
+
+        for c_p in cluster_preprocessings:
+            mg_data = self._cluster_preprocessings[c_p](mg_data, axis=1)
+
+        for g_p in group_preprocessings:
+            mg_data = self._group_preprocessings[g_p](mg_data, axis=0)
+
+        return mg_data

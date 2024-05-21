@@ -23,3 +23,6 @@ def gen_dummy(data_path, patient_id, new_panel):
         df = df.rename(index={idx: f"{new_panel}_celltype_{i}" for i, idx in enumerate(df.index)})
     df.to_excel(panel_dir / f"DM{patient_id} quantification.T.xlsx")
 
+
+def gen_metadata(data_path):
+    pass
