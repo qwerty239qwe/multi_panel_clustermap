@@ -44,6 +44,7 @@ class DataLoader(object):
         sel_cols = []
         for d_name, df in self._wide_dfs.items():
             sel_col = df.loc[:, name_or_id] if isinstance(name_or_id, str) else df.iloc[:, name_or_id]
+            sel_col.name = d_name
             sel_cols.append(sel_col)
         return pd.concat(sel_cols, axis=1)
 

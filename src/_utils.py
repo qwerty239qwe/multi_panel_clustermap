@@ -21,8 +21,20 @@ def gen_dummy(data_path, patient_id, new_panel):
         panel_dir = (parent_dir / new_panel)
         panel_dir.mkdir(parents=True, exist_ok=True)
         df = df.rename(index={idx: f"{new_panel}_celltype_{i}" for i, idx in enumerate(df.index)})
+    if Path(panel_dir / f"DM{patient_id} quantification.T.xlsx").is_file():
+        return
     df.to_excel(panel_dir / f"DM{patient_id} quantification.T.xlsx")
 
 
-def gen_metadata(data_path):
-    pass
+def gen_metadata(panel_dir, choose_from = None):
+    panel_dir = Path(panel_dir)
+    sample_names = [fn.stem.split(" ")[0] for fn in panel_dir.glob("*.xlsx")]
+    if choose_from is None:
+        choose_from = {"treatment": ["a", "b", "c", "d"],
+                       "sex": ["F", "M"]}
+
+    metadata = pd.DataFrame({k : np.random.choice(v, len(sample_names)) for k, v in choose_from.items()},
+                            index=sample_names)
+
+    return metadata
+
