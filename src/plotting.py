@@ -21,27 +21,17 @@ class Plotter(object):
         self.col_split_dic = col_split_dic
         self.meta_data = meta_data
         self.figsize = self._determine_figsize(figsize, self.data)
-        col_nums = [len(self.col_split_dic[c]) for c in col_cluster_orders]
-        row_nums = [len(self.row_split_dic[r]) for r in row_cluster_orders]
 
-        self.fig, self.axes = plt.subplots(len(self.row_split_dic)+1,
-                                           len(self.col_split_dic)+1,
-                                           figsize=self.figsize,
-                                           gridspec_kw={'width_ratios': [1, ] +
-                                                                        [2 / sum(col_nums) * cn for cn in col_nums],
-                                                        'height_ratios': [0.5, ] +
-                                                                         [2 / sum(row_nums) * rn for rn in row_nums]})
         self._row_dendrograms = {}
         self._col_dendrograms = {}
         self.col_cluster_orders = col_cluster_orders
-        self.row_cluster_orders = row_cluster_orders\
-
+        self.row_cluster_orders = row_cluster_orders
 
     @staticmethod
     def _determine_figsize(figsize, data):
         if figsize == "default":
-            print(f"Using default figsize: ({(data.shape[1], data.shape[0])})")
-            return data.shape[1], data.shape[0]
+            print(f"Using default figsize: ({(data.shape[1] // 2, data.shape[0] // 2)})")
+            return data.shape[1], data.shape[0] // 2
         return figsize
 
     def _split_cluster(self, data, split_dic, dendrogram_dic, orders=None, axis=0):
@@ -109,10 +99,23 @@ class Plotter(object):
                     (pos2.height - pad) * height_adj_coef]
         self.axes[0, 0].set_position(new_pos2)
 
+    def setup_figure(self, figsize=None):
+        col_nums = [len(self.col_split_dic[c]) for c in self.col_cluster_orders]
+        row_nums = [len(self.row_split_dic[r]) for r in self.row_cluster_orders]
+        self.fig, self.axes = plt.subplots(len(self.row_split_dic) + 1,
+                                           len(self.col_split_dic) + 1,
+                                           figsize=self.figsize if figsize is None else figsize,
+                                           gridspec_kw={'width_ratios': [1, ] +
+                                                                        [2 / sum(col_nums) * cn for cn in col_nums],
+                                                        'height_ratios': [0.5, ] +
+                                                                         [2 / sum(row_nums) * rn for rn in row_nums]})
+
     def plot(self,
+             figsize=None,
              wspace=0.05,
              hspace=0.05,
              cbar_pad=0.01):
+        self.setup_figure(figsize=figsize)
         self._split_cluster(self.data,
                             self.row_split_dic,
                             self._row_dendrograms,

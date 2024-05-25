@@ -22,23 +22,14 @@ def setup_cluster_data():
 
 def main():
     # setup_cluster_data()
-    #loader = DataLoader(Path("./test_data/panel_1"))
-    #merged_data = loader.get_merged("Total (cells)")
     metadata = pd.read_csv("./test_data/metadata.csv", index_col=0)
-
     processor = DataProcessor("./test_data",
                               metadata,
                               ["sex"],
                               ["panel_1", "panel_2", "panel_3"],
                               ["M", "F"],)
     processor.add_preprocessing(preprocessing_name="standardize", axis=0)
-    # processor.add_preprocessing(preprocessing_name="z_score", axis=0)
     merged_data = processor.get_processed_data("Total (cells)")
-    print(processor.row_split_dic)
-    print(processor.col_split_dic)
-    print(processor.row_orders)
-    print(processor.col_orders)
-    #
     plotter = Plotter(data=merged_data,
                       row_split_dic=processor.row_split_dic,
                       col_split_dic=processor.col_split_dic["sex"],
