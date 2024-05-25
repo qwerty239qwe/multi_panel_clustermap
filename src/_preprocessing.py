@@ -26,7 +26,7 @@ class ZscorePreprocessing(Preprocessing):
 
     def process(self, df, axis):
         assert axis in [0, 1]
-        return df.apply(lambda x: self.calc(x), axis=axis)
+        return df.apply(lambda x: self.calc(x), axis=axis, result_type='broadcast')
 
 
 class StandardScalerPreprocessing(Preprocessing):
@@ -42,7 +42,7 @@ class StandardScalerPreprocessing(Preprocessing):
 
     def process(self, df, axis):
         assert axis in [0, 1]
-        return df.apply(lambda x: self.calc(x), axis=axis)
+        return df.apply(lambda x: self.calc(x), axis=axis, result_type='broadcast')
 
 
 PREPROCESSINGS = {"z_score": ZscorePreprocessing,
