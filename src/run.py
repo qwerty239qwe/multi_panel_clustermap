@@ -33,10 +33,10 @@ def main():
     plotter = Plotter(data=merged_data,
                       row_split_dic=processor.row_split_dic,
                       col_split_dic=processor.col_split_dic["sex"],
-                      meta_data=metadata,
+                      col_meta_data=metadata,
                       row_cluster_orders=processor.row_orders,
                       col_cluster_orders=processor.col_orders,)
-    plotter.plot()
+    plotter.plot(col_colors=["sex", "treatment"])
 
 
 if __name__ == '__main__':

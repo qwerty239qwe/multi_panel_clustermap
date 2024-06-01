@@ -12,16 +12,18 @@ class Plotter(object):
                  data,
                  row_split_dic,
                  col_split_dic,
-                 meta_data,
+                 col_meta_data=None,
+                 row_meta_data=None,
                  row_cluster_orders=None,
                  col_cluster_orders=None,
                  figsize="default"):
         self.data = data
         self.row_split_dic = row_split_dic
         self.col_split_dic = col_split_dic
-        self.meta_data = meta_data
-        self.figsize = self._determine_figsize(figsize, self.data)
+        self.col_meta_data = col_meta_data
+        self.row_meta_data = row_meta_data
 
+        self.figsize = self._determine_figsize(figsize, self.data)
         self._row_dendrograms = {}
         self._col_dendrograms = {}
         self.col_cluster_orders = col_cluster_orders
@@ -45,6 +47,33 @@ class Plotter(object):
                                               axis=axis,
                                               rotate=90 if axis == 0 else 0)
             despine(ax=self.axes[i+1, 0], bottom=True, left=True)
+            self.axes[i + 1, 0].tick_params(axis='x',
+                                            which='both',
+                                            bottom=False,
+                                            top=False,
+                                            left=False,
+                                            labelbottom=False)
+
+    def _add_colors(self,
+                    ax,
+                    ordered_colors,
+                    start_i=0,
+                    append_on_yaxis=True,
+                    width=0.05,
+                    deviation_idx=0,
+                    x_dev=0,
+                    y_dev=0,
+                    height=1):
+        for i, color in enumerate(ordered_colors):
+            ax.add_patch(plt.Rectangle(xy=(-0.05 * deviation_idx + x_dev, i+start_i)
+                                          if append_on_yaxis else (i+start_i, y_dev + 0.05 * deviation_idx),
+                                       width=width if append_on_yaxis else height,
+                                       height=height if append_on_yaxis else width,
+                                       color=color,
+                                       lw=0,
+                                       transform=ax.get_yaxis_transform()
+                                            if append_on_yaxis else ax.get_xaxis_transform(),
+                                       clip_on=False))
 
     def _fill_heatmaps(self,
                        data,
@@ -54,7 +83,10 @@ class Plotter(object):
                        col_cluster_orders: List[str],
                        row_split_dic: Dict[str, List[str]],
                        col_split_dic: Dict[str, List[str]],
-                       vmin=None, vmax=None,
+                       row_colors: List[Dict[str, any]] = None,
+                       col_colors: List[Dict[str, any]] = None,
+                       vmin=None,
+                       vmax=None,
                        **kwargs):
         if row_cluster_orders is None:
             row_cluster_orders = list(row_split_dic.keys())
@@ -67,14 +99,21 @@ class Plotter(object):
         if vmax is None:
             vmax = data.max().max()
 
+        all_row_samples, all_col_samples = [], []
         for i, row in enumerate(row_cluster_orders):
             sel_row_samples: List[str] = np.array(row_split_dic[row])[row_dendrograms[row].reordered_ind]
+            all_row_samples.append(sel_row_samples)
             for j, col in enumerate(col_cluster_orders):
                 sel_col_samples: List[str] = np.array(col_split_dic[col])[col_dendrograms[col].reordered_ind]
+                if len(all_col_samples) <= j:
+                    all_col_samples.append(sel_col_samples)
+
                 subset_data = data.loc[sel_row_samples, sel_col_samples]
-                sns.heatmap(subset_data, ax=self.axes[i+1, j+1], cbar=False if not (i == 0 and j == 0) else True,
+                sns.heatmap(subset_data, ax=self.axes[i+1, j+1],
+                            cbar=False if not (i == 0 and j == 0) else True,
                             cbar_ax=self.axes[0, 0],
-                            vmin=vmin, vmax=vmax,
+                            vmin=vmin,
+                            vmax=vmax,
                             cbar_kws={'label': 'score', 'pad': 0.15},
                             **kwargs)
                 if j < len(col_cluster_orders)-1:
@@ -91,6 +130,29 @@ class Plotter(object):
                                                         top=False,
                                                         left=False,
                                                         labelbottom=False)
+        if row_colors is not None:
+            for ri, row_color_dic in enumerate(row_colors):
+                rendered_i = 0
+                for i, row in enumerate(row_cluster_orders):
+                    samples = np.array(row_split_dic[row])[row_dendrograms[row].reordered_ind]
+                    self._add_colors(self.axes[i + 1, 1],
+                                     ordered_colors=[row_color_dic[s] for s in samples],
+                                     start_i=0,
+                                     deviation_idx=ri+1)
+                    rendered_i += len(samples)
+
+        if col_colors is not None:
+            for ci, col_color_dic in enumerate(col_colors):
+                rendered_i = 0
+                for i, col in enumerate(col_cluster_orders):
+                    samples = np.array(col_split_dic[col])[col_dendrograms[col].reordered_ind]
+                    self._add_colors(self.axes[1, i + 1],
+                                     ordered_colors=[col_color_dic[s] for s in samples],
+                                     start_i=0,
+                                     deviation_idx=ci,
+                                     append_on_yaxis=False,
+                                     y_dev=1,)
+                    rendered_i += len(samples)
 
     def pad_colorbar(self, pad=0.05, width_adj_coef=0.5, height_adj_coef=1):
         pos2 = self.axes[0, 0].get_position()
@@ -110,12 +172,31 @@ class Plotter(object):
                                                         'height_ratios': [0.5, ] +
                                                                          [2 / sum(row_nums) * rn for rn in row_nums]})
 
+    def _get_luts(self, group, by="row", palette='tab10'):
+        if by == "row":
+            id_to_group = self.row_meta_data[group]
+        elif by == "col":
+            id_to_group = self.col_meta_data[group]
+        else:
+            raise ValueError("By must be either 'row' or 'col'")
+        groups = id_to_group.unique()
+        colors = sns.color_palette(palette, len(groups))
+        return id_to_group.map(dict(zip(groups, colors))).to_dict()
+
     def plot(self,
              figsize=None,
-             wspace=0.05,
-             hspace=0.05,
-             cbar_pad=0.01):
+             wspace=0.0,
+             hspace=0.0,
+             cbar_pad=0.01,
+             row_colors=None,
+             col_colors=None,):
         self.setup_figure(figsize=figsize)
+        if row_colors is not None:
+            row_colors = [self._get_luts(gp, by='row') for gp in row_colors]
+
+        if col_colors is not None:
+            col_colors = [self._get_luts(gp, by='col') for gp in col_colors]
+
         self._split_cluster(self.data,
                             self.row_split_dic,
                             self._row_dendrograms,
@@ -130,7 +211,9 @@ class Plotter(object):
                             row_cluster_orders=self.row_cluster_orders,
                             col_cluster_orders=self.col_cluster_orders,
                             row_split_dic=self.row_split_dic,
-                            col_split_dic=self.col_split_dic
+                            col_split_dic=self.col_split_dic,
+                            row_colors=row_colors,
+                            col_colors=col_colors
                             )
 
         plt.subplots_adjust(left=0.1,
@@ -142,5 +225,5 @@ class Plotter(object):
 
         self.pad_colorbar(pad=cbar_pad)
 
-        plt.savefig("./test.svg")
+        plt.savefig("./test_no_pad.png", dpi=450)
         plt.show()
