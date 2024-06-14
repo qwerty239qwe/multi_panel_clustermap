@@ -1,0 +1,23 @@
+[metadata]
+row_metadata_path = "./test_data/row_metadata.csv"  # Path to the row metadata file
+col_metadata_path = "./test_data/metadata.csv"  # Path to the col metadata file
+
+[DataProcessing]
+parent_dir = "./test_data"  # Path to the folder storing excel files
+row_cluster_names = ["panel"]
+row_cluster_orders = ["panel_1", "panel_2", "panel_3"]
+col_cluster_names = ["sex"]
+col_cluster_orders = ["M", "F"]
+preprocessing = [["z_score", 0], ["z_score", 1]]
+property_name_or_id = "Total (cells)"
+
+[Plotter]
+figsize = "default"  # or a list with two numbers (e.g., [4, 18]).
+row_split_factor = "panel"
+col_split_factor = "sex"
+col_colors = ["sex", "treatment"]
+row_colors = ["panel", "property"]
+wspace = 0.0
+hspace = 0.0
+file_name = "./test_panel_nogap.png"  # the suffix could be either .png, .jpg, .pdf, .svg
+dpi = 450  # higher = higher resolution, use >450 for paper publishing

@@ -38,3 +38,27 @@ def gen_metadata(panel_dir, choose_from = None):
 
     return metadata
 
+
+def gen_cluster_metadata(panel_dir="./test_data", choose_from = None):
+
+    panel_dir = Path(__file__).parent.parent / Path(panel_dir)
+    cell_names = set()
+    cell_to_panel = {}
+    for subdir in panel_dir.iterdir():
+        for fn in subdir.rglob("*.xlsx"):
+            cells = pd.read_excel(fn, index_col=0).index
+            cell_names |= set(cells)
+            cell_to_panel.update({c: subdir.stem for c in cells})
+
+    if choose_from is None:
+        choose_from = {"property": ["a", "b", "c", "d"],}
+
+    metadata = pd.DataFrame({"property": np.random.choice(choose_from["property"], len(cell_names))},
+                            index=list(cell_names))
+    metadata["panel"] = metadata.index.to_series().map(cell_to_panel)
+
+    return metadata
+
+
+if __name__ == "__main__":
+    gen_cluster_metadata()

@@ -65,6 +65,7 @@ class DataProcessor(object):
                  parent_data_dir,
                  sample_metadata: pd.DataFrame,
                  group_cols: List[str],
+                 cells_metadata: pd.DataFrame=None,
                  cluster_orders=None,
                  group_orders=None):
         self._parent_data_dir = parent_data_dir
